@@ -1,23 +1,26 @@
 let items = [];
 
+// Daftarkan input harga supaya otomatis berformat ribuan saat diketik Mama
 document.addEventListener('DOMContentLoaded', () => {
+  setupCurrencyInput('brgHarga');
+  setupCurrencyInput('clDiskon');
+  setupCurrencyInput('clModal');
+  setupCurrencyInput('clTakTerduga');
+  
   // Pasang listener real-time kalkulasi preview barang
   document.getElementById('brgJumlah')?.addEventListener('input', calcPreview);
   document.getElementById('brgHarga')?.addEventListener('input', calcPreview);
   
-  // Pasang listener kalkulator tutup kios harian
+  // Pasang listener kalkulator tutup kios
   document.getElementById('clDiskon')?.addEventListener('input', hitungTutupKios);
   document.getElementById('clModal')?.addEventListener('input', hitungTutupKios);
   document.getElementById('clTakTerduga')?.addEventListener('input', hitungTutupKios);
   document.getElementById('clSisaUang')?.addEventListener('change', hitungTutupKios);
-
-  // Jalankan hitung awal agar tampilan Rp 0 sinkron
-  hitungTutupKios();
 });
 
 function calcPreview() {
   const qty = parseInt(document.getElementById('brgJumlah').value) || 0;
-  const harga = parseInt(document.getElementById('brgHarga').value) || 0;
+  const harga = unformatRp(document.getElementById('brgHarga').value);
   const total = qty * harga;
   document.getElementById('brgPreview').textContent = total > 0 ? `Preview Total: ${formatRp(total)}` : '';
 }
@@ -25,7 +28,7 @@ function calcPreview() {
 function tambahBarang() {
   const nama = document.getElementById('brgNama').value.trim();
   const qty = parseInt(document.getElementById('brgJumlah').value) || 0;
-  const harga = parseInt(document.getElementById('brgHarga').value) || 0;
+  const harga = unformatRp(document.getElementById('brgHarga').value);
   const pembeli = document.getElementById('brgPembeli').value.trim() || 'Umum';
 
   if (!nama || qty <= 0 || harga <= 0) {
@@ -74,9 +77,9 @@ function hapusBarang(index) {
 
 function hitungTutupKios() {
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const diskon = parseInt(document.getElementById('clDiskon').value) || 0;
-  const modal = parseInt(document.getElementById('clModal').value) || 0;
-  const takTerduga = parseInt(document.getElementById('clTakTerduga').value) || 0;
+  const diskon = unformatRp(document.getElementById('clDiskon').value);
+  const modal = unformatRp(document.getElementById('clModal').value);
+  const takTerduga = unformatRp(document.getElementById('clTakTerduga').value);
   const statusSisa = document.getElementById('clSisaUang').value;
 
   const totalPendapatan = subtotal - diskon;
@@ -88,7 +91,7 @@ function hitungTutupKios() {
 
   const detailSisa = document.getElementById('detailSisaUang');
   if (statusSisa === 'Bawa Pulang') {
-    detailSisa.innerHTML = `💵 Uang dibawa pulang sebesar <strong>${formatRp(totalPendapatan)}</strong>. Sisa di laci kios kembali ke modal awal: <strong>${formatRp(modal - takTerduga)}</strong>.`;
+    detailSisa.innerHTML = `💵 Uang dibawa pulang sebesar <strong>${formatRp(totalPendapatan)}</strong>. Sisa di laci laci kios kembali ke modal awal: <strong>${formatRp(modal - takTerduga)}</strong>.`;
   } else {
     detailSisa.innerHTML = `🏦 Semua uang kas ditinggal di kios. Total di laci laci malam ini: <strong>${formatRp(sisaKasKios)}</strong>.`;
   }
@@ -106,7 +109,7 @@ function simpanDanKirim() {
     const calc = hitungTutupKios();
     const d = getNow();
 
-    // 1. Susun pesan teks WhatsApp dengan format asli kamu
+    // 1. Bentuk pesan teks untuk WhatsApp
     let msg = `*REKAP PENJUALAN TSAMARA FLORIST*\n`;
     msg += `📅 ${formatDateLong(d)}\n`;
     msg += `🕒 Jam Tutup: ${formatTime(d)}\n`;
@@ -128,10 +131,10 @@ function simpanDanKirim() {
     msg += `📌 Status Sisa Kas: *${calc.statusSisa}*\n\n`;
     msg += `_Laporan otomatis sistem kios_ 🌸`;
 
-    // 2. Buka kirim pesan ke WhatsApp Duo (Kamu & Mama) via utilitas share.js
+    // 2. Kirim Pesan ke WhatsApp Duo (Kamu & Mama)
     openWhatsAppDuo(msg);
 
-    // 3. Cadangkan data ke Google Sheets Cloud
+    // 3. Simpan data ke Cloud Google Sheets
     const dataSheets = {
       action: 'penjualan',
       date: formatDateShort(d),
@@ -147,12 +150,12 @@ function simpanDanKirim() {
     };
     await kirimKeSheets(dataSheets);
 
-    // 4. Simpan Histori ke LocalStorage agar terhitung di Dashboard index.html
+    // 4. Simpan Histori ke LocalStorage untuk Dashboard index.html
     let riwayat = JSON.parse(localStorage.getItem('riwayatPenjualan')) || [];
     riwayat.push(dataSheets);
     localStorage.setItem('riwayatPenjualan', JSON.stringify(riwayat));
 
-    // Reset Form Input & Keranjang setelah data sukses diproses
+    // Reset halaman setelah sukses
     items = [];
     renderItems();
     document.getElementById('clDiskon').value = '';

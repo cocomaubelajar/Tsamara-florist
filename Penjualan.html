@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tsamara Florist</title>
+<title>Penjualan - Tsamara Florist</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="style.css">
@@ -20,109 +20,68 @@
   </div>
 </nav>
 
-<header>
-  <div class="logo">🌸 Tsamara <span>Florist</span></div>
-  <div class="sub">Rekap Penjualan Harian</div>
-</header>
+<div class="page">
+  <header>
+    <div class="logo">🌸 Tsamara <span>Florist</span></div>
+    <div class="sub">Rekap Penjualan Harian</div>
+  </header>
 
-<div class="card">
-  <div class="card-title">Input Barang Terjual</div>
-  <div class="form-grid">
-    <div class="form-full">
-      <label>Nama Tanaman / Produk</label>
-      <input type="text" id="brgNama" placeholder="Masukkan nama tanaman..." />
-    </div>
-    <div>
-      <label>Jumlah (Pcs)</label>
-      <input type="number" id="brgJumlah" value="1" min="1" />
-    </div>
-    <div>
-      <label>Harga Satuan (Rp)</label>
-      <input type="number" id="brgHarga" placeholder="Contoh: 25000" />
-    </div>
-    <div class="form-full">
-      <label>Nama Pembeli / Keterangan</label>
-      <input type="text" id="brgPembeli" placeholder="Umum / Reseller / Nama Orang..." />
-    </div>
-  </div>
-  <div id="brgPreview" class="preview-text"></div>
-  <button class="btn btn-green" onclick="tambahBarang()" style="margin-top: 15px;">➕ Masukkan Keranjang</button>
-</div>
+  <div class="card">
+    <div class="card-title">Tambah Barang</div>
 
-<div class="card">
-  <div class="card-title">Keranjang Kasir Hari Ini</div>
-  <div class="table-container">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Nama Barang</th>
-          <th style="text-align:center;">Qty</th>
-          <th style="text-align:right;">Harga</th>
-          <th style="text-align:right;">Total</th>
-          <th style="text-align:center;">Aksi</th>
-        </tr>
-      </thead>
-      <tbody id="barangList">
-        <tr>
-          <td colspan="5" class="empty-table" style="text-align:center; padding:20px; color:var(--muted);">Belum ada barang dimasukkan</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
+    <div class="customer-row">
+      <input type="text" id="customerName" placeholder="Nama pelanggan (opsional)" />
+      <span class="optional-tag">opsional</span>
+    </div>
 
-<div class="card-grid">
-  <div class="card setup-card">
-    <div class="card-title">Pengaturan Kas Laci Toko</div>
-    <div class="form-grid" style="grid-template-columns: 1fr;">
-      <div>
-        <label>Uang Modal Awal Laci (Rp)</label>
-        <input type="number" id="clModal" value="100000" />
+    <div class="form-grid">
+      <div class="form-full">
+        <label>Nama Barang</label>
+        <input type="text" id="itemName" placeholder="cth: Asoka, Pot, Mawar..." />
       </div>
       <div>
-        <label>Potongan Diskon Akhir (Rp)</label>
-        <input type="number" id="clDiskon" placeholder="Jika ada diskon tambahan keseluruhan..." />
+        <label>Jumlah (pcs)</label>
+        <input type="number" id="itemQty" placeholder="0" min="1" oninput="calcPreview()" />
       </div>
       <div>
-        <label>Pengeluaran Bensin / Tak Terduga Kios (Rp)</label>
-        <input type="number" id="clTakTerduga" placeholder="Bensin, jajan, konsumsi kios..." />
-      </div>
-      <div>
-        <label>Kebijakan Sisa Uang Malam Ini</label>
-        <select id="clSisaUang">
-          <option value="Ditinggal di Kios" selected>🏦 Ditinggal di Kios (Semua Kas Tetap di Laci)</option>
-          <option value="Bawa Pulang">💵 Dibawa Pulang (Hanya Sisakan Modal di Kios)</option>
-        </select>
+        <label>Harga / pcs (Rp)</label>
+        <input type="number" id="itemPrice" placeholder="0" min="0" oninput="calcPreview()" />
       </div>
     </div>
+
+    <div class="preview-total" id="previewTotal"></div>
+    <button class="btn btn-dark-green" style="width: 100%; margin-top: 15px;" onclick="addItem()">+ Tambah ke Rekap</button>
   </div>
 
-  <div class="card summary-card">
-    <div class="card-title">Ringkasan Omset Harian</div>
-    <div class="sum-row">
-      <span>Subtotal Penjualan:</span>
-      <strong id="lblSubtotal">Rp 0</strong>
+  <div class="card">
+    <div class="card-title">Rekap Transaksi</div>
+    <div class="items-list" id="itemsList">
+      <div class="empty-state" id="noItemsMsg">Belum ada barang ditambahkan</div>
     </div>
-    <div class="sum-row highlight">
-      <span>🔥 Total Pendapatan Bersih:</span>
-      <strong id="lblTotalPendapatan" style="color:var(--green);">Rp 0</strong>
+    
+    <div style="margin-top: 20px; border-top: 1px dashed var(--green-pale); padding-top: 15px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <span>Subtotal (<span id="summaryItems">0 item</span>):</span>
+        <strong id="subtotalDisplay">Rp 0</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span>Diskon Tambahan (Rp):</span>
+        <input type="number" id="diskonInput" placeholder="0" style="width: 120px; padding: 5px; text-align: right;" oninput="updateDiskon()" />
+      </div>
+      <div id="diskonResult" style="display: none; text-align: right; color: var(--red); font-weight: bold; margin-bottom: 10px;">
+        <span id="diskonLabel">- Rp 0</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; color: var(--green);">
+        <span>TOTAL BAYAR:</span>
+        <span id="grandTotal">Rp 0</span>
+      </div>
     </div>
-    <div class="section-div"></div>
-    <div class="sum-row">
-      <span>💰 Total Kas Akhir di Laci Kios:</span>
-      <strong id="lblSisaKas">Rp 0</strong>
-    </div>
-    <div id="detailSisaUang" class="info-box-text" style="margin-top:12px; font-size:0.85rem; color:var(--muted);">
-      🏦 Semua uang kas ditinggal di kios. Total di laci laci malam ini: <strong>Rp 100.000</strong>.
-    </div>
-    <button class="btn btn-dark-green" onclick="simpanDanKirim()" style="margin-top: 20px; width: 100%;">🚀 Tutup Kios & Kirim Laporan</button>
-  </div>
-</div>
 
-<div class="floating-wa" onclick="window.open('https://wa.me/6285604072483', '_blank')" style="position:fixed; bottom:24px; right:24px; background:#25D366; width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.2); cursor:pointer; z-index:999;">
-  <svg style="width:32px; height:32px; fill:white;" viewBox="0 0 24 24">
-    <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.964 9.964 0 001.333 4.993L2 22l5.233-1.371a9.936 9.936 0 004.777 1.218h.004c5.506 0 9.989-4.478 9.99-9.984A9.966 9.966 0 0012.012 2m5.421 14.113c-.223.623-1.288 1.192-1.77 1.24-.482.049-.938.225-3.07-.614-2.565-1.01-4.214-3.619-4.342-3.79-.127-.171-1.037-1.378-1.037-2.628 0-1.25.656-1.864.889-2.112.233-.248.508-.31.677-.31.169 0 .338.003.486.01.149.007.348-.056.545.422.197.479.676 1.65.733 1.763.056.113.094.244.019.394-.075.15-.113.244-.225.375-.113.131-.237.293-.338.403-.113.122-.23.254-.099.479.131.224.584.962 1.256 1.56.867.773 1.594 1.013 1.819 1.126.225.113.357.094.489-.056.131-.15.564-.656.714-.881.15-.225.301-.188.508-.113.207.075 1.316.62 1.542.733.225.113.375.169.431.263.056.094.056.679-.167 1.302m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.99c-.002 5.45-4.437 9.884-9.89 9.884z"/>
-  </svg>
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button class="btn btn-orange" style="flex: 1;" onclick="simpanDanAksi('wa')">Kirim WA</button>
+      <button class="btn btn-blue" style="flex: 1;" onclick="simpanDanAksi('print')">Cetak Struk</button>
+    </div>
+  </div>
 </div>
 
 <script src="share.js"></script>

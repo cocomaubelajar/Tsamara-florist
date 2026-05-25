@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kulakan - Tsamara Florist</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <span class="nav-brand">🌸 Tsamara <span>Florist</span></span>
+    <a href="index.html" class="nav-link">🏠 Dashboard</a>
+    <a href="penjualan.html" class="nav-link">🌿 Penjualan</a>
+    <a href="kulakan.html" class="nav-link">🛒 Kulakan</a>
+    <a href="pesanan.html" class="nav-link">📋 Pesanan</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <div class="title">🛒 Daftar <span>Kulakan</span></div>
+    <div class="sub">Belanja Tanaman & Kebutuhan Kios</div>
+  </div>
+
+  <!-- Form tambah item -->
+  <div class="card orange">
+    <div class="card-title">Tambah Item Kulakan</div>
+    <div class="form-grid">
+      <div class="form-full">
+        <label>Nama Tanaman / Barang</label>
+        <input type="text" id="kulakanNama" placeholder="cth: Asoka, Pot, Pupuk..." />
+      </div>
+      <div>
+        <label>Jumlah</label>
+        <input type="number" id="kulakanJumlah" placeholder="0" min="1" />
+      </div>
+      <div>
+        <label>Satuan</label>
+        <input type="text" id="kulakanSatuan" placeholder="cth: pot, pcs, kg" />
+      </div>
+      <div class="form-full">
+        <label>Deskripsi / Catatan</label>
+        <textarea id="kulakanDeskripsi" placeholder="cth: pilih yang ukuran sedang, warna merah saja..." rows="2"></textarea>
+      </div>
+    </div>
+    <button class="btn btn-orange btn-full" onclick="addKulakan()">+ Tambah ke Daftar</button>
+  </div>
+
+  <!-- Daftar item -->
+  <div class="card">
+    <div class="card-title">Daftar Belanja</div>
+    <div id="kulakanList"><div class="empty-state">Belum ada item kulakan</div></div>
+
+    <div class="summary-box" style="margin-top:14px;">
+      <div>
+        <div class="summary-label">Progress</div>
+        <div class="summary-sub" id="kulakanProgress">0 dari 0 item</div>
+      </div>
+      <div id="kulakanPct" style="font-family:'Instrument Serif',serif;font-size:1.4rem;color:var(--green);">0%</div>
+    </div>
+
+    <div class="action-row" style="flex-wrap:wrap;margin-top:14px;">
+      <button class="btn btn-wa" onclick="kirimKulakanWA()" style="flex:2;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Kirim ke WA
+      </button>
+      <button class="btn btn-reset" onclick="resetKulakan()" style="flex:1;">🗑️ Reset</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const KULAKAN_KEY = 'tsamara_kulakan';
+
+  function getKulakan() {
+    try { return JSON.parse(localStorage.getItem(KULAKAN_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function saveKulakan(data) {
+    localStorage.setItem(KULAKAN_KEY, JSON.stringify(data));
+  }
+
+  function addKulakan() {
+    const nama = document.getElementById('kulakanNama').value.trim();
+    const jumlah = document.getElementById('kulakanJumlah').value;
+    const satuan = document.getElementById('kulakanSatuan').value.trim();
+    const deskripsi = document.getElementById('kulakanDeskripsi').value.trim();
+
+    if (!nama) { showToast('❌ Nama barang harus diisi', true); return; }
+
+    const data = getKulakan();
+    data.push({ id: Date.now(), nama, jumlah: jumlah || '', satuan: satuan || 'pcs', deskripsi, checked: false });
+    saveKulakan(data);
+
+    document.getElementById('kulakanNama').value = '';
+    document.getElementById('kulakanJumlah').value = '';
+    document.getElementById('kulakanSatuan').value = '';
+    document.getElementById('kulakanDeskripsi').value = '';
+
+    renderKulakan();
+    showToast('✅ Ditambahkan!');
+  }
+
+  function toggleKulakan(id) {
+    const data = getKulakan();
+    const item = data.find(k => k.id === id);
+    if (item) item.checked = !item.checked;
+    saveKulakan(data);
+    renderKulakan();
+  }
+
+  function deleteKulakan(id) {
+    const data = getKulakan().filter(k => k.id !== id);
+    saveKulakan(data);
+    renderKulakan();
+  }
+
+  function renderKulakan() {
+    const data = getKulakan();
+    const el = document.getElementById('kulakanList');
+
+    if (data.length === 0) {
+      el.innerHTML = '<div class="empty-state">Belum ada item kulakan</div>';
+      document.getElementById('kulakanProgress').textContent = '0 dari 0 item';
+      document.getElementById('kulakanPct').textContent = '0%';
+      return;
+    }
+
+    const checked = data.filter(k => k.checked).length;
+    const pct = Math.round((checked / data.length) * 100);
+    document.getElementById('kulakanProgress').textContent = `${checked} dari ${data.length} item sudah dicentang`;
+    document.getElementById('kulakanPct').textContent = `${pct}%`;
+
+    // Belum dicentang dulu, lalu sudah
+    const sorted = [...data.filter(k => !k.checked), ...data.filter(k => k.checked)];
+
+    el.innerHTML = sorted.map(k => `
+      <div class="check-row ${k.checked ? 'checked' : ''}">
+        <input type="checkbox" ${k.checked ? 'checked' : ''} onchange="toggleKulakan(${k.id})" />
+        <div class="check-info">
+          <div class="check-name ${k.checked ? 'done' : ''}">${k.nama}</div>
+          <div class="check-sub">
+            ${k.jumlah ? k.jumlah + ' ' + k.satuan : ''}
+            ${k.deskripsi ? ' · ' + k.deskripsi : ''}
+          </div>
+        </div>
+        <button class="btn-del" onclick="deleteKulakan(${k.id})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function kirimKulakanWA() {
+    const data = getKulakan();
+    if (data.length === 0) { showToast('❌ Daftar kulakan kosong!', true); return; }
+
+    const d = getNow();
+    const belum = data.filter(k => !k.checked);
+    const sudah = data.filter(k => k.checked);
+
+    let msg = `🛒 *DAFTAR KULAKAN - TSAMARA FLORIST*\n`;
+    msg += `📅 ${formatDateLong(d)}\n`;
+    msg += `━━━━━━━━━━━━━━━\n\n`;
+
+    if (belum.length > 0) {
+      msg += `*Belum Dibeli:*\n`;
+      belum.forEach((k, i) => {
+        msg += `${i+1}. ${k.nama}`;
+        if (k.jumlah) msg += ` — ${k.jumlah} ${k.satuan}`;
+        if (k.deskripsi) msg += `\n   📝 ${k.deskripsi}`;
+        msg += `\n`;
+      });
+    }
+
+    if (sudah.length > 0) {
+      msg += `\n*Sudah Dibeli:*\n`;
+      sudah.forEach((k, i) => {
+        msg += `✅ ${k.nama}`;
+        if (k.jumlah) msg += ` — ${k.jumlah} ${k.satuan}`;
+        msg += `\n`;
+      });
+    }
+
+    msg += `\n━━━━━━━━━━━━━━━\n`;
+    msg += `📦 ${belum.length} belum · ✅ ${sudah.length} sudah\n`;
+    msg += `\n_Tsamara Florist_ 🌸`;
+
+    // Kirim ke WA kamu dulu, lalu mama
+    window.open(`https://wa.me/${MY_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+    setTimeout(() => window.open(`https://wa.me/${MAMA_WA}?text=${encodeURIComponent(msg)}`, '_blank'), 800);
+
+    // Arsip ke Sheets
+    kirimKeSheets({ type: 'kulakan', date: formatDateLong(d), time: formatTime(d), items: data });
+    showToast('📤 Daftar kulakan dikirim!');
+  }
+
+  function resetKulakan() {
+    const data = getKulakan();
+    if (data.length === 0) { showToast('Daftar sudah kosong'); return; }
+    customConfirm('Reset semua daftar kulakan?', (ok) => {
+      if (!ok) return;
+      saveKulakan([]);
+      renderKulakan();
+      showToast('🗑️ Daftar direset');
+    });
+  }
+
+  renderKulakan();
+</script>
+</body>
+</html>

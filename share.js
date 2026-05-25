@@ -1,6 +1,6 @@
-// ── SHARED UTILITIES TSAMARA FLORIST ──
+// ── SHARED UTILITIES ──
 const MAMA_WA = '6285604072483';
-const GS_URL = 'https://script.google.com/macros/s/AKfycbwWu4Dm7j-y9nsnHTNwf7jR0_MgUCkOjEGtsSKLYDpvkG7xknkSwfCYNNsSfXgxlghG/exec';
+// MY_WA telah dihapus sesuai permintaan
 
 function formatDateLong(d) {
   const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
@@ -29,29 +29,27 @@ function showToast(msg, isError = false) {
   t.textContent = msg;
   t.style.background = isError ? '#e63946' : '#2d6a4f';
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function initConfirm(msg, onOk) {
+function customConfirm(msg, callback) {
   const overlay = document.getElementById('modalOverlay');
   const msgEl = document.getElementById('modalMsg');
-  const btnOk = document.getElementById('modalOk');
-  const btnCancel = document.getElementById('modalCancel');
-  
-  if (!overlay || !msgEl) return;
+  if (!overlay) { callback(confirm(msg)); return; }
   msgEl.textContent = msg;
   overlay.classList.add('show');
-  
-  btnOk.onclick = () => { overlay.classList.remove('show'); onOk(); };
-  btnCancel.onclick = () => overlay.classList.remove('show');
+  document.getElementById('modalOk').onclick = () => { overlay.classList.remove('show'); callback(true); };
+  document.getElementById('modalCancel').onclick = () => { overlay.classList.remove('show'); callback(false); };
 }
 
-// Fungsi kirim WA sudah difokuskan ke Mama saja
-function sendWA(msg) {
-  window.open(`https://wa.me/${MAMA_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+// Kirim hanya ke MAMA_WA (nomor toko)
+function sendWAToAll(msg) {
+  const url = `https://wa.me/${MAMA_WA}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
 
 async function kirimKeSheets(data) {
+  const GS_URL = 'https://script.google.com/macros/s/AKfycbwWu4Dm7j-y9nsnHTNwf7jR0_MgUCkOjEGtsSKLYDpvkG7xknkSwfCYNNsSfXgxlghG/exec';
   try {
     await fetch(GS_URL, {
       method: 'POST',
@@ -83,11 +81,10 @@ function injectModal() {
 
 // Navbar active state
 function setActiveNav() {
-  const path = window.location.pathname;
-  const page = path.split("/").pop().toLowerCase();
+  const path = window.location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.nav-link').forEach(link => {
-    const href = link.getAttribute('href').toLowerCase();
-    if (page === href || (page === '' && href === 'index.html')) {
+    const href = link.getAttribute('href');
+    if (href === path || (path === '' && href === 'index.html')) {
       link.classList.add('active');
     }
   });

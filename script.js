@@ -1,26 +1,23 @@
 let items = [];
 
-// Daftarkan input harga supaya otomatis berformat ribuan saat diketik Mama
 document.addEventListener('DOMContentLoaded', () => {
-  setupCurrencyInput('brgHarga');
-  setupCurrencyInput('clDiskon');
-  setupCurrencyInput('clModal');
-  setupCurrencyInput('clTakTerduga');
-  
   // Pasang listener real-time kalkulasi preview barang
   document.getElementById('brgJumlah')?.addEventListener('input', calcPreview);
   document.getElementById('brgHarga')?.addEventListener('input', calcPreview);
   
-  // Pasang listener kalkulator tutup kios
+  // Pasang listener kalkulator tutup kios harian
   document.getElementById('clDiskon')?.addEventListener('input', hitungTutupKios);
   document.getElementById('clModal')?.addEventListener('input', hitungTutupKios);
   document.getElementById('clTakTerduga')?.addEventListener('input', hitungTutupKios);
   document.getElementById('clSisaUang')?.addEventListener('change', hitungTutupKios);
+
+  // Jalankan hitung awal agar tampilan Rp 0 sinkron saat halaman dibuka
+  hitungTutupKios();
 });
 
 function calcPreview() {
   const qty = parseInt(document.getElementById('brgJumlah').value) || 0;
-  const harga = unformatRp(document.getElementById('brgHarga').value);
+  const harga = parseInt(document.getElementById('brgHarga').value) || 0;
   const total = qty * harga;
   document.getElementById('brgPreview').textContent = total > 0 ? `Preview Total: ${formatRp(total)}` : '';
 }
@@ -28,7 +25,7 @@ function calcPreview() {
 function tambahBarang() {
   const nama = document.getElementById('brgNama').value.trim();
   const qty = parseInt(document.getElementById('brgJumlah').value) || 0;
-  const harga = unformatRp(document.getElementById('brgHarga').value);
+  const harga = parseInt(document.getElementById('brgHarga').value) || 0;
   const pembeli = document.getElementById('brgPembeli').value.trim() || 'Umum';
 
   if (!nama || qty <= 0 || harga <= 0) {
@@ -77,9 +74,9 @@ function hapusBarang(index) {
 
 function hitungTutupKios() {
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const diskon = unformatRp(document.getElementById('clDiskon').value);
-  const modal = unformatRp(document.getElementById('clModal').value);
-  const takTerduga = unformatRp(document.getElementById('clTakTerduga').value);
+  const diskon = parseInt(document.getElementById('clDiskon').value) || 0;
+  const modal = parseInt(document.getElementById('clModal').value) || 0;
+  const takTerduga = parseInt(document.getElementById('clTakTerduga').value) || 0;
   const statusSisa = document.getElementById('clSisaUang').value;
 
   const totalPendapatan = subtotal - diskon;
@@ -109,7 +106,7 @@ function simpanDanKirim() {
     const calc = hitungTutupKios();
     const d = getNow();
 
-    // 1. Bentuk pesan teks untuk WhatsApp
+    // 1. Susun struktur pesan teks laporan
     let msg = `*REKAP PENJUALAN TSAMARA FLORIST*\n`;
     msg += `📅 ${formatDateLong(d)}\n`;
     msg += `🕒 Jam Tutup: ${formatTime(d)}\n`;
@@ -131,10 +128,10 @@ function simpanDanKirim() {
     msg += `📌 Status Sisa Kas: *${calc.statusSisa}*\n\n`;
     msg += `_Laporan otomatis sistem kios_ 🌸`;
 
-    // 2. Kirim Pesan ke WhatsApp Duo (Kamu & Mama)
-    openWhatsAppDuo(msg);
+    // 2. Kirim MURNI HANYA ke No WhatsApp Mama (MAMA_WA diambil dari share.js)
+    window.open(`https://wa.me/${MAMA_WA}?text=${encodeURIComponent(msg)}`, '_blank');
 
-    // 3. Simpan data ke Cloud Google Sheets
+    // 3. Cadangkan data latar belakang ke Google Sheets Cloud
     const dataSheets = {
       action: 'penjualan',
       date: formatDateShort(d),
@@ -150,17 +147,17 @@ function simpanDanKirim() {
     };
     await kirimKeSheets(dataSheets);
 
-    // 4. Simpan Histori ke LocalStorage untuk Dashboard index.html
+    // 4. Simpan Histori lokal untuk sinkronisasi Dashboard index.html
     let riwayat = JSON.parse(localStorage.getItem('riwayatPenjualan')) || [];
     riwayat.push(dataSheets);
     localStorage.setItem('riwayatPenjualan', JSON.stringify(riwayat));
 
-    // Reset halaman setelah sukses
+    // Reset Form Input & Keranjang setelah data sukses diproses
     items = [];
     renderItems();
     document.getElementById('clDiskon').value = '';
     document.getElementById('clTakTerduga').value = '';
     hitungTutupKios();
-    showToast('Laporan penjualan sukses terkirim dan disimpan!');
+    showToast('Laporan penjualan sukses terkirim ke Mama!');
   });
 }

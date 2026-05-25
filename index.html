@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard - Tsamara Florist</title>
+<title>Tsamara Florist</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,89 +25,130 @@
     <div class="sub">Dashboard Harian</div>
   </div>
 
-  <div class="quote-box" style="background: var(--green); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
-    <div class="quote-text" id="quoteText" style="font-style: italic; margin-bottom: 5px;">"Semangat berjualan hari ini, rezeki sudah ada yang mengatur."</div>
-    <div class="quote-sub" id="quoteDate" style="font-size: 0.8rem; opacity: 0.8;">—</div>
+  <!-- Quote penyemangat -->
+  <div class="quote-box">
+    <div class="quote-text" id="quoteText">Memuat kata penyemangat...</div>
+    <div class="quote-sub" id="quoteDate">—</div>
   </div>
 
-  <div class="card" style="margin-bottom: 20px;">
-    <div class="card-title">Ringkasan Hari Ini</div>
-    <div style="font-size: 2rem; font-weight: 800; color: var(--green); text-align: center; margin-top: 10px;" id="dashPendapatan">
-      Rp 0
+  <!-- Ringkasan -->
+  <div class="dash-grid">
+    <div class="dash-card">
+      <div class="dc-icon">💰</div>
+      <div class="dc-val" id="dashPendapatan">Rp 0</div>
+      <div class="dc-label">Pendapatan Hari Ini</div>
     </div>
-    <div style="text-align: center; font-size: 0.9rem; color: var(--muted); margin-bottom: 10px;">
-      Total Pendapatan (Penjualan)
+    <div class="dash-card">
+      <div class="dc-icon">🛒</div>
+      <div class="dc-val" id="dashTransaksi">0</div>
+      <div class="dc-label">Transaksi Hari Ini</div>
+    </div>
+    <div class="dash-card">
+      <div class="dc-icon">📋</div>
+      <div class="dc-val" id="dashPesanan">0</div>
+      <div class="dc-label">Pesanan Belum Dipenuhi</div>
+    </div>
+    <div class="dash-card">
+      <div class="dc-icon">🛍️</div>
+      <div class="dc-val" id="dashKulakan">0</div>
+      <div class="dc-label">Item Kulakan Belum Dicentang</div>
     </div>
   </div>
 
-  <div class="card" id="cardPesananDesak" style="display: none; border-left: 4px solid var(--red);">
-    <div class="card-title" style="color: var(--red);">⚠️ Reminder Pesanan!</div>
+  <!-- Pesanan mendesak -->
+  <div class="card" id="cardPesananDesak" style="display:none;">
+    <div class="card-title">⚠️ Pesanan Perlu Perhatian</div>
     <div id="listPesananDesak"></div>
+    <a href="pesanan.html" class="btn btn-orange btn-full" style="margin-top:10px;text-decoration:none;text-align:center;">
+      Lihat Semua Pesanan
+    </a>
+  </div>
+
+  <!-- Shortcut -->
+  <div class="card">
+    <div class="card-title">Menu Cepat</div>
+    <div class="action-row" style="flex-wrap:wrap;">
+      <a href="penjualan.html" class="btn btn-green" style="text-decoration:none;">🌿 Catat Penjualan</a>
+      <a href="kulakan.html" class="btn btn-orange" style="text-decoration:none;">🛒 List Kulakan</a>
+      <a href="pesanan.html" class="btn btn-blue" style="text-decoration:none;flex:1;min-width:120px;">📋 Pesanan Customer</a>
+    </div>
   </div>
 
 </div>
 
-<script src="share.js"></script>
+<script src="shared.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Tampilkan tanggal hari ini
-    document.getElementById('quoteDate').textContent = formatDateLong(getNow());
+  const quotes = [
+    "Setiap bunga yang terjual adalah hasil kerja kerasmu. Tetap semangat! 🌸",
+    "Hari ini adalah kesempatan baru untuk tumbuh bersama kios kita. 🌱",
+    "Rezeki sudah diatur, yang penting ikhtiar dan sabar. 💪",
+    "Kios yang rapi, hati yang tenang, pelanggan pun betah. 🏡",
+    "Satu transaksi kecil pun berarti besar untuk keluarga. ❤️",
+    "Tanaman tumbuh butuh waktu, bisnis pun begitu. Sabar ya! 🌿",
+    "Pelanggan yang puas adalah iklan terbaik. Tetap ramah! 😊",
+    "Hari yang lelah adalah bukti bahwa kamu sudah bekerja keras. 🌻",
+  ];
 
-    // Kalkulasi total pendapatan hari ini dari LocalStorage
+  document.getElementById('quoteText').textContent = quotes[new Date().getDay() % quotes.length];
+  document.getElementById('quoteDate').textContent = formatDateLong(getNow());
+
+  // Load data dari localStorage
+  function loadDashboard() {
+    // Pendapatan & transaksi dari log penjualan
+    const LOG_KEY = 'tsamara_log';
+    const todayLabel = formatDateLong(getNow());
     try {
-      const salesLog = JSON.parse(localStorage.getItem('tsamara_sales_log') || '[]');
-      const todayShort = formatDateShort(getNow());
-      
-      const pendapatanHariIni = salesLog
-        .filter(log => log.date === todayShort)
-        .reduce((sum, log) => sum + log.finalTotal, 0);
+      const log = JSON.parse(localStorage.getItem(LOG_KEY)) || [];
+      const todayEntries = log.filter(e => e.date === todayLabel);
+      const totalPendapatan = todayEntries.reduce((s, e) => s + e.finalTotal, 0);
+      document.getElementById('dashPendapatan').textContent = formatRp(totalPendapatan);
+      document.getElementById('dashTransaksi').textContent = todayEntries.length;
+    } catch(e) {}
 
-      document.getElementById('dashPendapatan').textContent = formatRp(pendapatanHariIni);
-    } catch (e) {
-      console.warn("Gagal membaca log penjualan", e);
-    }
-
-    // Cek pesanan yang mendesak (deadline hari ini atau lewat)
+    // Pesanan belum dipenuhi
     try {
-      const pesananLog = JSON.parse(localStorage.getItem('tsamara_pesanan') || '[]');
-      const belumSelesai = pesananLog.filter(p => p.status === 'belum' && p.tanggal);
-      
-      const today = new Date(); 
-      today.setHours(0,0,0,0);
-      
-      const desak = belumSelesai.filter(p => {
+      const pesanan = JSON.parse(localStorage.getItem('tsamara_pesanan')) || [];
+      const belum = pesanan.filter(p => p.status === 'belum');
+      document.getElementById('dashPesanan').textContent = belum.length;
+
+      // Pesanan mendesak (hari ini atau sudah lewat)
+      const today = new Date(); today.setHours(0,0,0,0);
+      const desak = belum.filter(p => {
+        if (!p.tanggal) return false;
         const tgl = new Date(p.tanggal); tgl.setHours(0,0,0,0);
-        const diff = (tgl - today) / (1000 * 60 * 60 * 24);
-        return diff <= 1; // Deadline hari ini, besok, atau sudah lewat
+        const diff = (tgl - today) / (1000*60*60*24);
+        return diff <= 1;
       });
 
       if (desak.length > 0) {
         document.getElementById('cardPesananDesak').style.display = 'block';
-        
-        let html = '';
-        desak.forEach(p => {
+        document.getElementById('listPesananDesak').innerHTML = desak.map(p => {
           const tgl = new Date(p.tanggal); tgl.setHours(0,0,0,0);
-          const diff = Math.round((tgl - today) / (1000 * 60 * 60 * 24));
-          const label = diff < 0 ? '🔴 Lewat Deadline' : diff === 0 ? '🟡 Hari Ini' : '🟠 Besok';
-          
-          html += `
-            <div style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-weight: bold;">${p.customer}</div>
-                <div style="font-size: 0.85rem; color: #555;">${p.tanaman} (${p.jumlah} pcs)</div>
+          const diff = Math.round((tgl - today) / (1000*60*60*24));
+          const label = diff < 0 ? '🔴 Sudah lewat' : diff === 0 ? '🟡 Hari ini' : '🟠 Besok';
+          return `
+            <div class="item-row">
+              <div class="item-info">
+                <div class="item-name">${p.customer}</div>
+                <div class="item-desc">${p.tanaman} · ${p.jumlah} pcs</div>
+                ${p.deskripsi ? `<div class="item-desc">${p.deskripsi}</div>` : ''}
               </div>
-              <div style="font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; background: #ffe4e4; color: var(--red); font-weight: bold;">
-                ${label}
-              </div>
+              <span class="item-badge badge-red">${label}</span>
             </div>
           `;
-        });
-        document.getElementById('listPesananDesak').innerHTML = html;
+        }).join('');
       }
-    } catch(e) {
-      console.warn("Gagal membaca log pesanan", e);
-    }
-  });
+    } catch(e) {}
+
+    // Item kulakan belum dicentang
+    try {
+      const kulakan = JSON.parse(localStorage.getItem('tsamara_kulakan')) || [];
+      const belumCentang = kulakan.filter(k => !k.checked);
+      document.getElementById('dashKulakan').textContent = belumCentang.length;
+    } catch(e) {}
+  }
+
+  loadDashboard();
 </script>
 </body>
 </html>

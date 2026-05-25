@@ -1,163 +1,211 @@
+// ── LOGIKA KHUSUS PENJUALAN TSAMARA FLORIST ──
 let items = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Pasang listener real-time kalkulasi preview barang
-  document.getElementById('brgJumlah')?.addEventListener('input', calcPreview);
-  document.getElementById('brgHarga')?.addEventListener('input', calcPreview);
-  
-  // Pasang listener kalkulator tutup kios harian
-  document.getElementById('clDiskon')?.addEventListener('input', hitungTutupKios);
-  document.getElementById('clModal')?.addEventListener('input', hitungTutupKios);
-  document.getElementById('clTakTerduga')?.addEventListener('input', hitungTutupKios);
-  document.getElementById('clSisaUang')?.addEventListener('change', hitungTutupKios);
-
-  // Jalankan hitung awal agar tampilan Rp 0 sinkron saat halaman dibuka
-  hitungTutupKios();
-});
-
 function calcPreview() {
-  const qty = parseInt(document.getElementById('brgJumlah').value) || 0;
-  const harga = parseInt(document.getElementById('brgHarga').value) || 0;
-  const total = qty * harga;
-  document.getElementById('brgPreview').textContent = total > 0 ? `Preview Total: ${formatRp(total)}` : '';
+  const qty = parseFloat(document.getElementById('itemQty').value) || 0;
+  const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+  const el = document.getElementById('previewTotal');
+  if (qty > 0 && price > 0) {
+    el.textContent = `${qty} × ${formatRp(price)} = ${formatRp(qty * price)}`;
+  } else {
+    el.textContent = '';
+  }
 }
 
-function tambahBarang() {
-  const nama = document.getElementById('brgNama').value.trim();
-  const qty = parseInt(document.getElementById('brgJumlah').value) || 0;
-  const harga = parseInt(document.getElementById('brgHarga').value) || 0;
-  const pembeli = document.getElementById('brgPembeli').value.trim() || 'Umum';
+function addItem() {
+  const name = document.getElementById('itemName').value.trim();
+  const qty = parseFloat(document.getElementById('itemQty').value);
+  const price = parseFloat(document.getElementById('itemPrice').value);
+  const customer = document.getElementById('customerName').value.trim();
 
-  if (!nama || qty <= 0 || harga <= 0) {
-    showToast('Harap isi semua kolom input barang dengan benar!', true);
-    return;
-  }
+  if (!name) { showToast('❌ Nama barang harus diisi', true); return; }
+  if (!qty || qty <= 0) { showToast('❌ Jumlah harus diisi', true); return; }
+  if (!price || price <= 0) { showToast('❌ Harga harus diisi', true); return; }
 
-  items.push({ nama, qty, harga, pembeli, total: qty * harga });
-  
-  // Reset form input barang
-  document.getElementById('brgNama').value = '';
-  document.getElementById('brgJumlah').value = '1';
-  document.getElementById('brgHarga').value = '';
-  document.getElementById('brgPembeli').value = '';
-  document.getElementById('brgPreview').textContent = '';
+  items.push({ name, qty, price, total: qty * price, customer });
+
+  document.getElementById('itemName').value = '';
+  document.getElementById('itemQty').value = '';
+  document.getElementById('itemPrice').value = '';
+  document.getElementById('previewTotal').textContent = '';
 
   renderItems();
-  hitungTutupKios();
-  showToast('Barang berhasil ditambahkan!');
+  showToast('✅ Barang ditambahkan!');
+}
+
+function deleteItem(i) {
+  items.splice(i, 1);
+  renderItems();
+}
+
+function getDiskon() {
+  return parseFloat(document.getElementById('diskonInput').value) || 0;
+}
+
+function updateDiskon() {
+  const subtotal = items.reduce((s, it) => s + it.total, 0);
+  const diskon = getDiskon();
+  const final = Math.max(0, subtotal - diskon);
+  
+  const elGrandTotal = document.getElementById('grandTotal');
+  if(elGrandTotal) elGrandTotal.textContent = formatRp(final);
+  
+  const res = document.getElementById('diskonResult');
+  if(res) {
+    if (diskon > 0) {
+      res.style.display = 'block';
+      document.getElementById('diskonLabel').textContent = `− ${formatRp(diskon)}`;
+    } else {
+      res.style.display = 'none';
+    }
+  }
 }
 
 function renderItems() {
-  const list = document.getElementById('barangList');
+  const list = document.getElementById('itemsList');
+  const noItems = document.getElementById('noItemsMsg');
+  
+  if (!list) return;
+
   if (items.length === 0) {
-    list.innerHTML = '<tr><td colspan="5" class="empty-table" style="text-align:center; padding:20px; color:var(--muted);">Belum ada barang dimasukkan</td></tr>';
+    list.innerHTML = '<div class="empty-state">Belum ada barang ditambahkan</div>';
+    if(document.getElementById('subtotalDisplay')) document.getElementById('subtotalDisplay').textContent = 'Rp 0';
+    if(document.getElementById('grandTotal')) document.getElementById('grandTotal').textContent = 'Rp 0';
+    if(document.getElementById('summaryItems')) document.getElementById('summaryItems').textContent = '0 item';
+    if(document.getElementById('diskonResult')) document.getElementById('diskonResult').style.display = 'none';
+    if(noItems) noItems.style.display = 'none';
     return;
   }
 
-  list.innerHTML = items.map((item, index) => `
-    <tr>
-      <td><strong>${item.nama}</strong><br><small style="color:var(--muted);">👤 ${item.pembeli}</small></td>
-      <td style="text-align:center;">${item.qty}</td>
-      <td style="text-align:right;">${formatRp(item.harga)}</td>
-      <td style="text-align:right; font-weight:700; color:var(--green);">${formatRp(item.total)}</td>
-      <td style="text-align:center;"><button class="btn-action btn-del" onclick="hapusBarang(${index})">🗑️</button></td>
-    </tr>
-  `).join('');
+  if(noItems) noItems.style.display = 'none';
+  
+  let html = '';
+  items.forEach((it, i) => {
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed #ccc;">
+        <div>
+          <div style="font-weight:700;">${it.name} ${it.customer ? `(<small>${it.customer}</small>)` : ''}</div>
+          <div style="font-size:0.85rem; color:#666;">${it.qty} pcs x ${formatRp(it.price)}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="font-weight:700;">${formatRp(it.total)}</div>
+          <button class="btn btn-reset text-red" onclick="deleteItem(${i})">❌</button>
+        </div>
+      </div>
+    `;
+  });
+  list.innerHTML = html;
+
+  const subtotal = items.reduce((s, it) => s + it.total, 0);
+  if(document.getElementById('subtotalDisplay')) document.getElementById('subtotalDisplay').textContent = formatRp(subtotal);
+  if(document.getElementById('summaryItems')) document.getElementById('summaryItems').textContent = `${items.length} item`;
+  updateDiskon();
 }
 
-function hapusBarang(index) {
-  items.splice(index, 1);
-  renderItems();
-  hitungTutupKios();
-  showToast('Barang dihapus.');
-}
+function simpanDanAksi(tipe) {
+  if (items.length === 0) {
+    showToast('❌ Rekap masih kosong!', true);
+    return;
+  }
 
-function hitungTutupKios() {
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const diskon = parseInt(document.getElementById('clDiskon').value) || 0;
-  const modal = parseInt(document.getElementById('clModal').value) || 0;
-  const takTerduga = parseInt(document.getElementById('clTakTerduga').value) || 0;
-  const statusSisa = document.getElementById('clSisaUang').value;
+  const diskon = getDiskon();
+  const finalTotal = Math.max(0, subtotal - diskon);
+  const sekarang = getNow();
 
-  const totalPendapatan = subtotal - diskon;
-  const sisaKasKios = modal + totalPendapatan - takTerduga;
+  const dataLog = {
+    tipe: 'Penjualan',
+    date: formatDateShort(sekarang),
+    time: formatTime(sekarang),
+    items: items,
+    subtotal: subtotal,
+    diskon: diskon,
+    finalTotal: finalTotal
+  };
 
-  document.getElementById('lblSubtotal').textContent = formatRp(subtotal);
-  document.getElementById('lblTotalPendapatan').textContent = formatRp(totalPendapatan);
-  document.getElementById('lblSisaKas').textContent = formatRp(sisaKasKios);
+  initConfirm(`Lanjutkan simpan dan ${tipe === 'wa' ? 'Kirim ke WA' : 'Cetak Struk'}?`, async () => {
+    // Kirim background ke Google Sheets
+    kirimKeSheets(dataLog);
 
-  const detailSisa = document.getElementById('detailSisaUang');
-  if (statusSisa === 'Bawa Pulang') {
-    detailSisa.innerHTML = `💵 Uang dibawa pulang sebesar <strong>${formatRp(totalPendapatan)}</strong>. Sisa di laci laci kios kembali ke modal awal: <strong>${formatRp(modal - takTerduga)}</strong>.`;
-  } else {
-    detailSisa.innerHTML = `🏦 Semua uang kas ditinggal di kios. Total di laci laci malam ini: <strong>${formatRp(sisaKasKios)}</strong>.`;
-  }
+    if (tipe === 'wa') {
+      buatTeksWA(dataLog);
+    } else if (tipe === 'print') {
+      cetakStruk(dataLog);
+    }
 
-  return { subtotal, diskon, modal, takTerduga, totalPendapatan, sisaKasKios, statusSisa };
-}
-
-function simpanDanKirim() {
-  if (items.length === 0) {
-    showToast('Masukkan minimal 1 barang terlebih dahulu!', true);
-    return;
-  }
-
-  confirmAction('Apakah data penjualan hari ini sudah benar dan siap dikirim?', async () => {
-    const calc = hitungTutupKios();
-    const d = getNow();
-
-    // 1. Susun struktur pesan teks laporan
-    let msg = `*REKAP PENJUALAN TSAMARA FLORIST*\n`;
-    msg += `📅 ${formatDateLong(d)}\n`;
-    msg += `🕒 Jam Tutup: ${formatTime(d)}\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-    items.forEach((item, i) => {
-      msg += `${i+1}. *${item.nama}* [👤 ${item.pembeli}]\n`;
-      msg += `   ${item.qty} pcs x ${formatRp(item.harga)} = *${formatRp(item.total)}*\n`;
-    });
-
-    msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `💵 Subtotal: ${formatRp(calc.subtotal)}\n`;
-    if (calc.diskon > 0) msg += `🔻 Diskon: ${formatRp(calc.diskon)}\n`;
-    msg += `💰 *Total Pendapatan: ${formatRp(calc.totalPendapatan)}*\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `📦 Modal Awal: ${formatRp(calc.modal)}\n`;
-    if (calc.takTerduga > 0) msg += `⚠️ Pengeluaran Tak Terduga: ${formatRp(calc.takTerduga)}\n`;
-    msg += `🧮 *Sisa Kas Akhir: ${formatRp(calc.sisaKasKios)}*\n`;
-    msg += `📌 Status Sisa Kas: *${calc.statusSisa}*\n\n`;
-    msg += `_Laporan otomatis sistem kios_ 🌸`;
-
-    // 2. Kirim MURNI HANYA ke No WhatsApp Mama (MAMA_WA diambil dari share.js)
-    window.open(`https://wa.me/${MAMA_WA}?text=${encodeURIComponent(msg)}`, '_blank');
-
-    // 3. Cadangkan data latar belakang ke Google Sheets Cloud
-    const dataSheets = {
-      action: 'penjualan',
-      date: formatDateShort(d),
-      time: formatTime(d),
-      subtotal: calc.subtotal,
-      diskon: calc.diskon,
-      finalTotal: calc.totalPendapatan,
-      modal: calc.modal,
-      takTerduga: calc.takTerduga,
-      sisaKas: calc.sisaKasKios,
-      statusSisa: calc.statusSisa,
-      items: JSON.stringify(items)
-    };
-    await kirimKeSheets(dataSheets);
-
-    // 4. Simpan Histori lokal untuk sinkronisasi Dashboard index.html
-    let riwayat = JSON.parse(localStorage.getItem('riwayatPenjualan')) || [];
-    riwayat.push(dataSheets);
-    localStorage.setItem('riwayatPenjualan', JSON.stringify(riwayat));
-
-    // Reset Form Input & Keranjang setelah data sukses diproses
+    // Reset Form
     items = [];
+    document.getElementById('diskonInput').value = 0;
     renderItems();
-    document.getElementById('clDiskon').value = '';
-    document.getElementById('clTakTerduga').value = '';
-    hitungTutupKios();
-    showToast('Laporan penjualan sukses terkirim ke Mama!');
+    showToast('✅ Transaksi berhasil diproses!');
   });
 }
+
+function buatTeksWA(data) {
+  let msg = `*NOTA PENJUALAN TSAMARA FLORIST*\n`;
+  msg += `📅 ${formatDateLong(getNow())} — 🕒 ${data.time}\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━\n\n`;
+  
+  data.items.forEach((item, i) => {
+    msg += `${i+1}. *${item.name}*\n`;
+    msg += `   ${item.qty} pcs x ${formatRp(item.price)} = ${formatRp(item.total)}\n`;
+  });
+
+  msg += `━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `Subtotal: ${formatRp(data.subtotal)}\n`;
+  if (data.diskon > 0) msg += `Diskon: -${formatRp(data.diskon)}\n`;
+  msg += `*Total Bayar: ${formatRp(data.finalTotal)}*\n\n`;
+  msg += ` Terima kasih telah berbelanja di Tsamara Florist! 🌸`;
+
+  // Menggunakan fungsi sendWA dari share.js (Otomatis ke Mama)
+  sendWA(msg);
+}
+
+function cetakStruk(data) {
+  const w = window.open('', '_blank');
+  let itemRows = data.items.map(item => `
+    <tr>
+      <td style="padding:4px 0;">${item.name}<br><small>${item.qty} x ${formatRp(item.price)}</small></td>
+      <td style="text-align:right; vertical-align:bottom;">${formatRp(item.total)}</td>
+    </tr>
+  `).join('');
+
+  w.document.write(`
+    <html>
+    <head>
+      <title>Cetak Struk</title>
+      <style>
+        @page { size: 58mm auto; margin: 0; }
+        body { font-family: 'Courier New', Courier, monospace; width: 48mm; margin: 5mm; font-size: 11px; color: #000; }
+        .text-center { text-align: center; }
+        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      </style>
+    </head>
+    <body onload="window.print(); window.close();">
+      <div class="text-center">
+        <b style="font-size:13px;">TSAMARA FLORIST</b><br>
+        Dsn. Kangkungan, Mojokerto<br>
+        ${formatDateShort(getNow())} — ${data.time}
+      </div>
+      <div class="divider"></div>
+      <table>${itemRows}</table>
+      <div class="divider"></div>
+      <table>
+        <tr><td>Subtotal:</td><td style="text-align:right;">${formatRp(data.subtotal)}</td></tr>
+        ${data.diskon > 0 ? `<tr><td>Diskon:</td><td style="text-align:right;">-${formatRp(data.diskon)}</td></tr>` : ''}
+        <tr><td><b>Total:</b></td><td style="text-align:right;"><b>${formatRp(data.finalTotal)}</b></td></tr>
+      </table>
+      <div class="divider"></div>
+      <div class="text-center" style="margin-top:10px;">
+        Terima Kasih!<br>Selamat Bercocok Tanam 🌸
+      </div>
+    </body>
+    </html>
+  `);
+  w.document.close();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderItems();
+});

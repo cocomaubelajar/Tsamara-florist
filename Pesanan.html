@@ -19,155 +19,157 @@
 </nav>
 
 <div class="page">
+
   <div class="page-header">
     <div class="title">📋 Pesanan <span>Customer</span></div>
-    <div class="sub">Catat & Pantau Pesanan PO Toko</div>
+    <div class="sub">Catat & Pantau Pesanan</div>
   </div>
 
   <div class="card blue">
-    <div class="card-title">Tambah Pesanan Pre-Order Baru</div>
+    <div class="card-title">Tambah Pesanan Baru</div>
     <div class="form-grid">
       <div class="form-full">
         <label>Nama Customer</label>
-        <input type="text" id="pesNama" placeholder="Nama lengkap customer..." />
+        <input type="text" id="pesNama" placeholder="Nama customer..." />
       </div>
       <div class="form-full">
-        <label>Tanaman / Model Rangkaian Bunga</label>\n        <input type="text" id="pesTanaman" placeholder="cth: Bouquet Mawar Merah, Aglaonema Merah..." />
+        <label>Tanaman / Barang Dipesan</label>
+        <input type="text" id="pesTanaman" placeholder="cth: Asoka merah, Pot besar..." />
       </div>
       <div>
-        <label>Jumlah Pesanan (Pcs)</label>
-        <input type="number" id="pesJumlah" value="1" min="1" />
+        <label>Jumlah</label>
+        <input type="number" id="pesJumlah" placeholder="0" min="1" />
       </div>
       <div>
-        <label>Tenggat Tanggal Pengambilan (Deadline)</label>
-        <input type="date" id="pesTanggal" />
+        <label>Tanggal Dibutuhkan</label>
+        <input type="date" id="pesTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;" />
       </div>
       <div class="form-full">
-        <label>Detail / Request Khusus Kustomisasi</label>\n        <input type="text" id="pesDesc" placeholder="cth: minta pita bungkus warna pink pastel, bungkus kado..." />
+        <label>Deskripsi / Catatan Khusus</label>
+        <textarea id="pesDeskripsi" placeholder="cth: Minta pot yang sudah dicat..." rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;"></textarea>
       </div>
     </div>
-    <button class="btn btn-blue" onclick="tambahPesanan()" style="margin-top: 15px;">➕ Daftarkan Pesanan</button>
+    <button class="btn btn-blue" style="width: 100%; margin-top: 15px;" onclick="addPesanan()">+ Simpan Pesanan</button>
   </div>
 
   <div class="card">
-    <div class="card-title-flex">
-      <div class="filter-group">
-        <button class="btn btn-sm btn-outline active" id="fBelum" onclick="setFilter('belum')">⏳ Belum Dipenuhi</button>
-        <button class="btn btn-sm btn-outline" id="fSemua" onclick="setFilter('semua')">🗂️ Semua Data</button>
-      </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <div class="card-title" style="margin: 0;">Daftar Pesanan</div>
+      <select id="filterPesanan" onchange="renderPesanan()" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
+        <option value="semua">Semua Pesanan</option>
+        <option value="belum">Belum Selesai</option>
+        <option value="sudah">Selesai</option>
+      </select>
     </div>
-    <div id="pesananList" class="item-list-container" style="margin-top:15px;"></div>
+    
+    <div id="pesananList">
+      <div class="empty-state">Belum ada pesanan</div>
+    </div>
   </div>
+
 </div>
 
 <script src="share.js"></script>
 <script>
-  let pesanan = JSON.parse(localStorage.getItem('riwayatPesanan')) || [];
-  let filterMode = 'belum';
+  let pesanan = JSON.parse(localStorage.getItem('tsamara_pesanan') || '[]');
+
+  function addPesanan() {
+    const customer = document.getElementById('pesNama').value.trim();
+    const tanaman = document.getElementById('pesTanaman').value.trim();
+    const jumlah = document.getElementById('pesJumlah').value.trim();
+    const tanggal = document.getElementById('pesTanggal').value;
+    const deskripsi = document.getElementById('pesDeskripsi').value.trim();
+
+    if (!customer || !tanaman) { showToast('❌ Nama customer & pesanan wajib diisi!', true); return; }
+
+    pesanan.push({
+      id: Date.now(),
+      customer, tanaman, jumlah, tanggal, deskripsi,
+      status: 'belum',
+      createdAt: formatDateShort(getNow())
+    });
+
+    simpanPesanan();
+    document.getElementById('pesNama').value = '';
+    document.getElementById('pesTanaman').value = '';
+    document.getElementById('pesJumlah').value = '';
+    document.getElementById('pesTanggal').value = '';
+    document.getElementById('pesDeskripsi').value = '';
+    
+    document.getElementById('filterPesanan').value = 'semua';
+    renderPesanan();
+    showToast('✅ Pesanan berhasil dicatat');
+  }
+
+  function selesaikanPesanan(id) {
+    initConfirm('Tandai pesanan ini selesai dan beritahu Mama via WA?', () => {
+      const idx = pesanan.findIndex(p => p.id === id);
+      if (idx > -1) {
+        pesanan[idx].status = 'sudah';
+        pesanan[idx].selesaiAt = formatDateShort(getNow());
+        simpanPesanan();
+        renderPesanan();
+        
+        // Kirim notif WA otomatis ke Mama
+        const p = pesanan[idx];
+        const msg = `✅ *PESANAN SELESAI*\n\nCustomer: ${p.customer}\nPesanan: ${p.tanaman} (${p.jumlah})\nStatus: Sudah disiapkan/diambil.`;
+        sendWA(msg);
+      }
+    });
+  }
+
+  function hapusPesanan(id) {
+    initConfirm('Yakin ingin menghapus data pesanan ini?', () => {
+      pesanan = pesanan.filter(p => p.id !== id);
+      simpanPesanan();
+      renderPesanan();
+    });
+  }
+
+  function simpanPesanan() {
+    localStorage.setItem('tsamara_pesanan', JSON.stringify(pesanan));
+  }
 
   function renderPesanan() {
-    const data = filterMode === 'belum' ? pesanan.filter(p => p.status === 'belum') : pesanan;
+    const filterMode = document.getElementById('filterPesanan').value;
     const el = document.getElementById('pesananList');
+    
+    let data = pesanan;
+    if (filterMode !== 'semua') {
+      data = pesanan.filter(p => p.status === filterMode);
+    }
 
     if (data.length === 0) {
-      el.innerHTML = `<div class="empty-state">${filterMode === 'belum' ? 'Tidak ada tanggungan pesanan aktif hari ini! 🎉' : 'Belum ada data pesanan.'}</div>`;
+      el.innerHTML = `<div class="empty-state">${filterMode === 'belum' ? 'Tidak ada pesanan yang tertunda 🎉' : 'Belum ada pesanan'}</div>`;
       return;
     }
 
-    const today = new Date(); today.setHours(0,0,0,0);
-
-    el.innerHTML = data.map((p, index) => {
-      let badgeClass = 'badge-green';
-      let labelStatus = '⏳ Diproses';
-
-      if (p.status === 'sudah') {
-        badgeClass = 'badge-gray';
-        labelStatus = '✅ Selesai';
-      } else if (p.tanggal) {
-        const tgl = new Date(p.tanggal); tgl.setHours(0,0,0,0);
-        const diff = (tgl - today) / (1000*60*60*24);
-        if (diff < 0) { badgeClass = 'badge-red'; labelStatus = '🔴 Terlambat'; }
-        else if (diff === 0) { badgeClass = 'badge-red'; labelStatus = '🟡 Hari Ini'; }
-        else if (diff === 1) { badgeClass = 'badge-orange'; labelStatus = '🟠 Besok'; }
-      }
-
-      const tglLabel = p.tanggal ? formatDateShort(new Date(p.tanggal)) : 'Fleksibel';
-
-      return `
-        <div class="item-row" style="${p.status === 'sudah' ? 'opacity:0.55;' : ''}">
-          <div class="item-info">
-            <div class="item-name">👤 <strong>${p.customer}</strong></div>
-            <div class="item-desc">🌿 Produk: ${p.tanaman} · <strong>${p.jumlah} pcs</strong></div>
-            <div class="item-desc">📅 Ambil: <strong>${tglLabel}</strong></div>
-            ${p.deskripsi ? `<div class="item-desc" style="color:var(--text); font-style:italic;">📝 Request: ${p.deskripsi}</div>` : ''}
-            ${p.status === 'sudah' ? `<div class="item-desc" style="color:var(--green); font-weight:700;">✅ Diserahkan: ${p.selesaiAt}</div>` : ''}
-          </div>
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">
-            <span class="item-badge ${badgeClass}">${labelStatus}</span>
-            <div style="display:flex; gap:6px;">
-              ${p.status === 'belum' ? `<button class="btn-action btn-check" onclick="selesaikanPesanan(${index})">✔️ Selesai</button>` : ''}
-              <button class="btn-action btn-del" onclick="hapusPesanan(${index})">🗑️</button>
+    let html = '';
+    data.forEach(p => {
+      const isSelesai = p.status === 'sudah';
+      const tglLabel = p.tanggal ? formatDateShort(new Date(p.tanggal)) : 'Tgl tidak ditentukan';
+      
+      html += `
+        <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; background: ${isSelesai ? '#f9f9f9' : '#fff'};">
+          <div style="display: flex; justify-content: space-between;">
+            <div style="font-weight: 700; color: var(--green); margin-bottom: 5px;">👤 ${p.customer}</div>
+            <div style="font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; background: ${isSelesai ? 'var(--green-pale)' : '#ffe4e4'}; color: ${isSelesai ? 'var(--green)' : 'var(--red)'}; height: max-content;">
+              ${isSelesai ? 'Selesai' : 'Belum'}
             </div>
+          </div>
+          <div style="font-size: 0.9rem; color: #444; margin-bottom: 4px;">🌿 ${p.tanaman} (${p.jumlah || 1} pcs)</div>
+          <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">📅 Deadline: ${tglLabel}</div>
+          ${p.deskripsi ? `<div style="font-size: 0.85rem; color: #666; font-style: italic; margin-bottom: 8px;">📝 "${p.deskripsi}"</div>` : ''}
+          
+          <div style="display: flex; gap: 8px; margin-top: 10px;">
+            ${!isSelesai ? `<button class="btn btn-blue" style="flex:1; padding:6px;" onclick="selesaikanPesanan(${p.id})">Tandai Selesai</button>` : ''}
+            <button class="btn btn-reset text-red" style="padding:6px; border: 1px solid #ddd; border-radius:6px;" onclick="hapusPesanan(${p.id})">Hapus</button>
           </div>
         </div>
       `;
-    }).join('');
-  }
-
-  function tambahPesanan() {
-    const customer = document.getElementById('pesNama').value.trim();
-    const tanaman = document.getElementById('pesTanaman').value.trim();
-    const jumlah = parseInt(document.getElementById('pesJumlah').value) || 0;
-    const tanggal = document.getElementById('pesTanggal').value;
-    const deskripsi = document.getElementById('pesDesc').value.trim();
-
-    if (!customer || !tanaman || jumlah <= 0) {
-      showToast('Mohon lengkapi Nama, Produk tanaman, dan Jumlah!', true);
-      return;
-    }
-
-    pesanan.push({ customer, tanaman, jumlah, tanggal, deskripsi, status: 'belum', selesaiAt: '' });
-    saveAndRender();
-
-    // Reset Form
-    document.getElementById('pesNama').value = '';
-    document.getElementById('pesTanaman').value = '';
-    document.getElementById('pesJumlah').value = '1';
-    document.getElementById('pesTanggal').value = '';
-    document.getElementById('pesDesc').value = '';
-    showToast('Pesanan customer berhasil dicatat!');
-  }
-
-  function selesaikanPesanan(index) {
-    const d = getNow();
-    pesanan[index].status = 'sudah';
-    pesanan[index].selesaiAt = `${formatDateShort(d)} ${formatTime(d)}`;
+    });
     
-    // Kirim notifikasi WA singkat ke Mama jika pesanan sudah diambil
-    const msg = `*PESANAN SELESAI TSAMARA FLORIST*\n👤 Pelanggan: ${pesanan[index].customer}\n🌿 Barang: ${pesanan[index].tanaman} (${pesanan[index].jumlah} pcs)\n✅ Telah diserahkan pada: ${pesanan[index].selesaiAt}\n\n_Sistem Monitoring Tsamara Florist_`;
-    openWhatsAppDuo(msg);
-    kirimKeSheets({ action: 'pesanan_selesai', detail: msg });
-
-    saveAndRender();
-    showToast('Pesanan selesai dipenuhi!');
-  }
-
-  function hapusPesanan(index) {
-    pesanan.splice(index, 1);
-    saveAndRender();
-    showToast('Data pesanan dihapus.');
-  }
-
-  function setFilter(mode) {
-    filterMode = mode;
-    document.getElementById('fBelum').classList.toggle('active', mode === 'belum');
-    document.getElementById('fSemua').classList.toggle('active', mode === 'semua');
-    renderPesanan();
-  }
-
-  function saveAndRender() {
-    localStorage.setItem('riwayatPesanan', JSON.stringify(pesanan));
-    renderPesanan();
+    el.innerHTML = html;
   }
 
   document.addEventListener('DOMContentLoaded', renderPesanan);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tsamara Florist - Dashboard</title>
+<title>Dashboard - Tsamara Florist</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,97 +19,93 @@
 </nav>
 
 <div class="page">
+
   <div class="page-header">
     <div class="title">🌸 Tsamara <span>Florist</span></div>
-    <div class="sub">Dashboard Ringkasan Harian</div>
+    <div class="sub">Dashboard Harian</div>
   </div>
 
-  <div class="quote-box">
-    <div class="quote-text" id=\"quoteText\">"Semangat jualan hari ini Mama! Semoga berkah, tanaman sehat, dan laris manis!" 🌸</div>\n    <div class="quote-sub" id="quoteDate">—</div>
+  <div class="quote-box" style="background: var(--green); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
+    <div class="quote-text" id="quoteText" style="font-style: italic; margin-bottom: 5px;">"Semangat berjualan hari ini, rezeki sudah ada yang mengatur."</div>
+    <div class="quote-sub" id="quoteDate" style="font-size: 0.8rem; opacity: 0.8;">—</div>
   </div>
 
-  <div class="dash-grid">
-    <div class="dash-card">
-      <div class="dc-icon">💰</div>
-      <div class="dc-val" id="dashPendapatan">Rp 0</div>
-      <div class="dc-lbl">Pendapatan Bersih Hari Ini</div>
+  <div class="card" style="margin-bottom: 20px;">
+    <div class="card-title">Ringkasan Hari Ini</div>
+    <div style="font-size: 2rem; font-weight: 800; color: var(--green); text-align: center; margin-top: 10px;" id="dashPendapatan">
+      Rp 0
     </div>
-    <div class="dash-card">
-      <div class="dc-icon">📝</div>
-      <div class="dc-val" id="dashTransaksi">0 Trx</div>
-      <div class="dc-lbl">Total Nota Transaksi Terjual</div>
+    <div style="text-align: center; font-size: 0.9rem; color: var(--muted); margin-bottom: 10px;">
+      Total Pendapatan (Penjualan)
     </div>
   </div>
 
-  <div class="card red" id="cardPesananDesak" style="display:none; margin-top:20px;">
-    <div class="card-title">⚠️ TANGGUNGAN PESANAN JATUH TEMPO (HARI INI / BESOK)</div>
-    <div id="listPesananDesak" class="item-list-container"></div>
+  <div class="card" id="cardPesananDesak" style="display: none; border-left: 4px solid var(--red);">
+    <div class="card-title" style="color: var(--red);">⚠️ Reminder Pesanan!</div>
+    <div id="listPesananDesak"></div>
   </div>
 
-  <div class="card" style="margin-top:20px;">
-    <div class="card-title">Navigasi Operasional Toko</div>
-    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px;">
-      <a href="penjualan.html" class="btn btn-green" style="text-align:center; text-decoration:none; line-height:2rem;">🌿 Catat Penjualan</a>
-      <a href="kulakan.html" class="btn btn-orange" style="text-align:center; text-decoration:none; line-height:2rem;">🛒 Ke Daftar Kulakan</a>
-      <a href="pesanan.html" class="btn btn-blue" style="text-align:center; text-decoration:none; line-height:2rem;">📋 Manajemen PO</a>
-    </div>
-  </div>
 </div>
 
 <script src="share.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const d = getNow();
-    document.getElementById('quoteDate').textContent = formatDateLong(d);
+    // Tampilkan tanggal hari ini
+    document.getElementById('quoteDate').textContent = formatDateLong(getNow());
 
-    // 1. Kalkulasi Statistik dari Penjualan Hari Ini
+    // Kalkulasi total pendapatan hari ini dari LocalStorage
     try {
-      const riwayat = JSON.parse(localStorage.getItem('riwayatPenjualan')) || [];
-      const tglHariIni = formatDateShort(d);
+      const salesLog = JSON.parse(localStorage.getItem('tsamara_sales_log') || '[]');
+      const todayShort = formatDateShort(getNow());
+      
+      const pendapatanHariIni = salesLog
+        .filter(log => log.date === todayShort)
+        .reduce((sum, log) => sum + log.finalTotal, 0);
 
-      // Saring data kasir yang tanggalnya sama dengan hari ini
-      const harian = riwayat.filter(r => r.date === tglHariIni);
-      
-      const totalOmset = harian.reduce((sum, r) => sum + (r.finalTotal || 0), 0);
-      
-      document.getElementById('dashPendapatan').textContent = formatRp(totalOmset);
-      document.getElementById('dashTransaksi').textContent = `${harian.length} Transaksi`;
-    } catch(e) {
-      console.error(e);
+      document.getElementById('dashPendapatan').textContent = formatRp(pendapatanHariIni);
+    } catch (e) {
+      console.warn("Gagal membaca log penjualan", e);
     }
 
-    // 2. Deteksi Pesanan yang Sangat Urgent (H-1 atau Hari Ini)
+    // Cek pesanan yang mendesak (deadline hari ini atau lewat)
     try {
-      const pesanan = JSON.parse(localStorage.getItem('riwayatPesanan')) || [];
-      const belum = pesanan.filter(p => p.status === 'belum');
+      const pesananLog = JSON.parse(localStorage.getItem('tsamara_pesanan') || '[]');
+      const belumSelesai = pesananLog.filter(p => p.status === 'belum' && p.tanggal);
       
-      const today = new Date(); today.setHours(0,0,0,0);
-      const desak = belum.filter(p => {
-        if (!p.tanggal) return false;
+      const today = new Date(); 
+      today.setHours(0,0,0,0);
+      
+      const desak = belumSelesai.filter(p => {
         const tgl = new Date(p.tanggal); tgl.setHours(0,0,0,0);
-        const diff = (tgl - today) / (1000*60*60*24);
-        return diff <= 1; // Hari ini, Besok, atau Terlambat
+        const diff = (tgl - today) / (1000 * 60 * 60 * 24);
+        return diff <= 1; // Deadline hari ini, besok, atau sudah lewat
       });
 
       if (desak.length > 0) {
         document.getElementById('cardPesananDesak').style.display = 'block';
-        document.getElementById('listPesananDesak').innerHTML = desak.map(p => {
+        
+        let html = '';
+        desak.forEach(p => {
           const tgl = new Date(p.tanggal); tgl.setHours(0,0,0,0);
-          const diff = Math.round((tgl - today) / (1000*60*60*24));
-          const label = diff < 0 ? '🔴 TERLAMBAT' : diff === 0 ? '🟡 HARI INI' : '🟠 BESOK';
-          return `
-            <div class="item-row">
-              <div class="item-info">
-                <div class="item-name">👤 <strong>${p.customer}</strong></div>
-                <div class="item-desc">🌿 ${p.tanaman} · ${p.jumlah} pcs</div>\n                ${p.deskripsi ? `<div class="item-desc" style="font-style:italic;">📝 Catatan: ${p.deskripsi}</div>` : ''}
+          const diff = Math.round((tgl - today) / (1000 * 60 * 60 * 24));
+          const label = diff < 0 ? '🔴 Lewat Deadline' : diff === 0 ? '🟡 Hari Ini' : '🟠 Besok';
+          
+          html += `
+            <div style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: bold;">${p.customer}</div>
+                <div style="font-size: 0.85rem; color: #555;">${p.tanaman} (${p.jumlah} pcs)</div>
               </div>
-              <span class="item-badge ${diff <= 0 ? 'badge-red' : 'badge-orange'}">${label}</span>
+              <div style="font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; background: #ffe4e4; color: var(--red); font-weight: bold;">
+                ${label}
+              </div>
             </div>
           `;
-        }).join('');
+        });
+        document.getElementById('listPesananDesak').innerHTML = html;
       }
     } catch(e) {
-      console.error(e);
+      console.warn("Gagal membaca log pesanan", e);
     }
   });
 </script>
